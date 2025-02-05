@@ -29,7 +29,8 @@
     "express": "^4.21.2",
     "jsonschema": "^1.5.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "prisma": "^6.3.1",
