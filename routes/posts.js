@@ -11,7 +11,7 @@ const { BadRequestError, NotFoundError } = require("../expressError");
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/** 🔹 Define validation schemas using Zod */
+/** Define validation schemas using Zod */
 const postSchema = z.object({
     content: z.string().min(1, "Post content cannot be empty"),
     tags: z.array(z.string()).optional(),
@@ -21,13 +21,17 @@ const commentSchema = z.object({
     content: z.string().min(1, "Comment cannot be empty"),
 });
 
-/** GET /posts
- *
- * Gets all posts.
+/** GET /posts?tag=optionalTag
+ *  Get all posts or filter by a specific tag.
  */
 router.get("/", async function (req, res, next) {
     try {
+        const { tag } = req.query;
+
+        const whereConditions = tag ? { tags: { some: { name: tag } } } : {};
+
         const posts = await prisma.post.findMany({
+            where: whereConditions,
             include: { author: { select: { username: true } }, comments: true },
         });
 
@@ -37,22 +41,6 @@ router.get("/", async function (req, res, next) {
     }
 });
 
-/** GET /posts/:tag
- *
- * Filters posts by tag.
- */
-router.get("/:tag", async function (req, res, next) {
-    try {
-        const posts = await prisma.post.findMany({
-            where: { tags: { has: req.params.tag } },
-            include: { author: { select: { username: true } }, comments: true },
-        });
-
-        return res.json({ posts });
-    } catch (err) {
-        return next(err);
-    }
-});
 
 /** POST /posts
  *

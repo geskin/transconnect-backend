@@ -11,11 +11,11 @@ const prisma = new PrismaClient();
 const router = new express.Router();
 const BCRYPT_WORK_FACTOR = 12;
 
-/** 🔹 Define validation schemas using Zod */
+/** Define validation schemas using Zod */
 const userRegisterSchema = z.object({
-    email: z.string().email().optional(), // email is nullable in schema
+    email: z.string().email().optional(),
     username: z.string().min(3),
-    password: z.string().min(6), // Password must be at least 6 chars
+    password: z.string().min(6),
     pronouns: z.string().optional(),
 });
 

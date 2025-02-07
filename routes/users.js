@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const BCRYPT_WORK_FACTOR = 12;
 
-/** 🔹 Define validation schemas using Zod */
+/** Define validation schemas using Zod */
 const userNewSchema = z.object({
     username: z.string().min(3),
     email: z.string().email().optional(),
@@ -30,7 +30,7 @@ const userUpdateSchema = z.object({
     role: z.enum(["USER", "ADMIN"]).optional(),
 });
 
-/** POST / { user }  => { user, token }
+/** POST /users { user }  => { user, token }
  *
  * Adds a new user (admin-only).
  */
@@ -59,7 +59,7 @@ router.post("/", ensureAdmin, async function (req, res, next) {
     }
 });
 
-/** 📄 GET / => { users: [ { username, email, pronouns, role }, ... ] }
+/** GET / => { users: [ { username, email, pronouns, role }, ... ] }
  *
  * Returns list of all users (admin-only).
  */
@@ -75,7 +75,7 @@ router.get("/", ensureAdmin, async function (req, res, next) {
     }
 });
 
-/** 🆔 GET /[username] => { user }
+/** GET /users/[username] => { user }
  *
  * Returns user details.
  */
@@ -94,7 +94,7 @@ router.get("/:username", ensureLoggedIn, async function (req, res, next) {
     }
 });
 
-/** PATCH /[username] { user } => { user }
+/** PATCH /users/[username] { user } => { user }
  *
  * Updates user details.
  */
@@ -125,7 +125,7 @@ router.patch("/:username", ensureCorrectUserOrAdmin, async function (req, res, n
     }
 });
 
-/** DELETE /[username]  =>  { deleted: username }
+/** DELETE /users/[username]  =>  { deleted: username }
  *
  * Deletes a user.
  */

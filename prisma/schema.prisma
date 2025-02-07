@@ -19,12 +19,12 @@ model User {
   email     String?    @unique
   username  String     @unique
   password  String
-  role      Role       @default(USER)
   pronouns  String?
-  posts     Post[]     @relation(onDelete: Cascade)
+  role      Role       @default(USER)
+  posts     Post[]     
   Profile   Profile?
   resources Resource[]
-  comments   Comment[] @relation(onDelete: Cascade)
+  comments   Comment[] 
 }
 
 model Profile {
@@ -43,7 +43,7 @@ model Post {
   authorId  Int
   user      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   tags      Tag[]
-  comments  Comment[] @relation(onDelete: Cascade)  // Ensures comments are deleted when a post is deleted
+  comments  Comment[]
 }
 
 enum Role {
