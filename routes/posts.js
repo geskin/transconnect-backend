@@ -41,6 +41,22 @@ router.get("/", async function (req, res, next) {
     }
 });
 
+/** GET /posts/tags
+ * Get all available post tags
+ */
+
+router.get("/tags", async function (req, res, next) {
+    try {
+        const tags = await prisma.tag.findMany({
+            select: { name: true, posts: true },
+        });
+
+        return res.json({ tags });
+    } catch (err) {
+        return next(err);
+    }
+});
+
 
 /** POST /posts
  *

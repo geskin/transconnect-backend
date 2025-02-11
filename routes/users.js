@@ -59,14 +59,14 @@ router.post("/", ensureAdmin, async function (req, res, next) {
     }
 });
 
-/** GET / => { users: [ { username, email, pronouns, role }, ... ] }
+/** GET / => { users: [ { username, email, role, createdAt, editedAt, posts }, ... ] }
  *
  * Returns list of all users (admin-only).
  */
 router.get("/", ensureAdmin, async function (req, res, next) {
     try {
         const users = await prisma.user.findMany({
-            select: { username: true, email: true, pronouns: true, role: true },
+            select: { username: true, email: true, role: true, createdAt: true, editedAt: true, posts: true },
         });
 
         return res.json({ users });
@@ -83,7 +83,7 @@ router.get("/:username", ensureLoggedIn, async function (req, res, next) {
     try {
         const user = await prisma.user.findUnique({
             where: { username: req.params.username },
-            select: { username: true, email: true, pronouns: true, role: true },
+            select: { username: true, email: true, pronouns: true, role: true, createdAt: true, editedAt: true, posts: true },
         });
 
         if (!user) throw new NotFoundError("User not found");

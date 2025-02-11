@@ -16,30 +16,25 @@ datasource db {
 model User {
   id        Int        @id @default(autoincrement())
   createdAt DateTime   @default(now())
+  editedAt  DateTime   @default(now()) @db.Timestamp(6)
   email     String?    @unique
   username  String     @unique
   password  String
   pronouns  String?
+  bio       String?    @db.VarChar(500)
   role      Role       @default(USER)
   posts     Post[]     
-  Profile   Profile?
   resources Resource[]
   comments   Comment[] 
-}
-
-model Profile {
-  id     Int     @id @default(autoincrement())
-  bio    String?
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int     @unique
 }
 
 model Post {
   id        Int       @id @default(autoincrement())
   title     String    @db.VarChar(255)
   createdAt DateTime  @default(now()) @db.Timestamp(6)
-  content   String?
-  published Boolean   @default(false)
+  editedAt  DateTime  @default(now()) @db.Timestamp(6)
+  content   String?   @db.VarChar(500)
+  // published Boolean   @default(false)
   authorId  Int
   user      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   tags      Tag[]
@@ -54,7 +49,7 @@ enum Role {
 model Tag {
   id    Int    @id @default(autoincrement())
   name  String
-  posts Post[]
+  posts Post[] // tags should not reference deleted posts
 }
 
 model Resource {
