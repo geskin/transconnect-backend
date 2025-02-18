@@ -32,7 +32,7 @@ router.get("/", async function (req, res, next) {
 
         const posts = await prisma.post.findMany({
             where: whereConditions,
-            include: { author: { select: { username: true } }, comments: true },
+            select: { title: true, content: true, user: true, createdAt: true, comments: true, tags: true }
         });
 
         return res.json({ posts });
@@ -71,7 +71,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
             data: {
                 content: parsedBody.content,
                 tags: parsedBody.tags || [],
-                authorId: req.user.id, // Ensure the user is logged in
+                authorId: req.user.id, //can't read id...why?
             },
         });
 
@@ -79,6 +79,30 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
     } catch (err) {
         if (err instanceof z.ZodError) {
             return next(new BadRequestError(err.errors.map(e => e.message)));
+        }
+        return next(err);
+    }
+});
+
+/** GET /posts/:post_id 
+ * 
+ * Gets a specific post (and its associated comments?)
+ * authorization required: logged in
+*/
+
+router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
+    try {
+        const post = await prisma.post.findUnique({
+            where: { id: Number(req.params.post_id) }
+        });
+        console.debug(post);
+        return res.json({ post });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return next(new BadRequestError(err.errors.map(e => e.message)));
+        }
+        if (err.code === "P2025") {
+            return next(new NotFoundError("Post not found"));
         }
         return next(err);
     }
