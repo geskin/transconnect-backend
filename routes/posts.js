@@ -13,6 +13,7 @@ const router = express.Router();
 
 /** Define validation schemas using Zod */
 const postSchema = z.object({
+    title: z.string().min(1, "Post title cannot be empty"),
     content: z.string().min(1, "Post content cannot be empty"),
     tags: z.array(z.string()).optional(),
 });
@@ -65,13 +66,14 @@ router.get("/tags", async function (req, res, next) {
  */
 router.post("/", ensureLoggedIn, async function (req, res, next) {
     try {
-        const parsedBody = postSchema.parse(req.body);
+        const parsedBody = postSchema.parse(req.body.post);
 
         const post = await prisma.post.create({
             data: {
+                title: parsedBody.title,
                 content: parsedBody.content,
                 tags: parsedBody.tags || [],
-                authorId: req.user.id, //can't read id...why?
+                user: req.body.user
             },
         });
 
@@ -186,7 +188,7 @@ router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next
             data: {
                 content: parsedBody.content,
                 postId: Number(req.params.post_id),
-                authorId: req.user.id, // Ensure the user is logged in
+                author: req.body.user,
             },
         });
 

@@ -35,8 +35,8 @@ model Post {
   editedAt  DateTime  @default(now()) @db.Timestamp(6)
   content   String?   @db.VarChar(500)
   // published Boolean   @default(false)
-  authorId  Int
-  user      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  userId    Int       
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags      Tag[]
   comments  Comment[]
 }
@@ -48,25 +48,25 @@ enum Role {
 
 model Tag {
   id    Int    @id @default(autoincrement())
-  name  String
+  name  String @unique
   posts Post[] // tags should not reference deleted posts
 }
 
 model Resource {
   id          Int     @id @default(autoincrement())
   name        String  @db.VarChar(255)
-  description String?
+  description String
   url         String?
   approved    Boolean @default(false)
-  userId      Int
-  user        User    @relation(fields: [userId], references: [id])
-  type        Type[]
+  userId      Int?    //only necessary if through submission
+  user        User?    @relation(fields: [userId], references: [id])
+  types       Type[]   //@relation("ResourceTypes")  // Many-to-many relation
 }
 
 model Type {
   id        Int        @id @default(autoincrement())
-  name      String
-  resources Resource[]
+  name      String     @unique
+  resources Resource[] //@relation("ResourceTypes")
 }
 
 model Comment {

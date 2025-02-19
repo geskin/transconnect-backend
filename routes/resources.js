@@ -11,13 +11,62 @@ const router = express.Router();
 
 const BATHROOM_API_BASE_URL = "https://www.refugerestrooms.org/api/v1/restrooms"; //by_location?page=1&per_page=50&offset=0&unisex=true
 
-/** GET /resources → Get all resources, sorted alphabetically */
+/** GET /resources → Get all resources, sorted alphabetically 
+ * optionally sort by search input or tag selection
+ * no auth required
+*/
 router.get("/", async (req, res, next) => {
     try {
+        const { searchTerm, type } = req.query;
+
+        const filters = {};
+        if (searchTerm) {
+            filters.name = { contains: searchTerm, mode: "insensitive" };
+        }
+        if (type) {
+            filters.types = { some: { name: type } };
+        }
+
         const resources = await prisma.resource.findMany({
+            where: filters,
             orderBy: { name: "asc" },
         });
         return res.json({ resources });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /resources/types
+ * Get all available resource types
+ */
+
+router.get("/types", async function (req, res, next) {
+    try {
+        const types = await prisma.type.findMany({
+            select: { name: true, resources: true },
+        });
+
+        return res.json({ types });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /resources/[resource_id] 
+ * gets a specific resource
+ * 
+ * no initial auth required
+*/
+
+router.get("/:resource_id", async (req, res, next) => {
+    try {
+        const { resource_id } = req.params;
+
+        const resource = await prisma.resource.findUnique({
+            where: { id: resource_id }
+        });
+        return res.json({ resource });
     } catch (err) {
         return next(err);
     }
@@ -110,16 +159,21 @@ router.get("/search", async (req, res, next) => {
 //     }
 // });
 
-/** Bathroom resources must be added via the Refuge Restrooms API */
+/** POST /resources
+ * 
+ * creates a resource
+ * 
+ * Bathroom resources must be added via the Refuge Restrooms API */
 router.post("/", async (req, res, next) => {
     try {
-        const { name, description, url, userId, type } = req.body;
+        const { name, description, url, types, userId, user } = req.body;
 
-        if (!name || !userId || !type) {
-            throw new BadRequestError("Name, userId, and type are required.");
+        if (!name || !types) {
+            throw new BadRequestError("name and type are required.");
         }
 
-        if (type.includes("bathroom")) {
+        //throw pop up alert that includes link to Refuge API
+        if (types.includes("bathroom")) {
             throw new ForbiddenError("Please add bathrooms via the Refuge Restrooms API, not this page.");
         }
 
@@ -129,8 +183,10 @@ router.post("/", async (req, res, next) => {
                 description,
                 url,
                 approved: false,
-                userId,
-                type: { connect: type.map((t) => ({ name: t })) },
+                user: userId ? { connect: { id: userId } } : undefined,
+                types: {
+                    connect: types.map(t => ({ name: t })) // 👈 Connect existing types
+                }
             },
         });
 
@@ -141,7 +197,7 @@ router.post("/", async (req, res, next) => {
 });
 
 /** PATCH /resources/:resource_id → Edit resource (admin only) */
-router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
+router.patch("/:resource_id/edit", ensureAdmin, async (req, res, next) => {
     try {
         const { resource_id } = req.params;
         const { name, description, url, approved, type } = req.body;

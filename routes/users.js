@@ -83,7 +83,7 @@ router.get("/:username", ensureLoggedIn, async function (req, res, next) {
     try {
         const user = await prisma.user.findUnique({
             where: { username: req.params.username },
-            select: { username: true, email: true, pronouns: true, role: true, createdAt: true, editedAt: true, posts: true },
+            select: { id: true, username: true, email: true, pronouns: true, role: true, createdAt: true, editedAt: true, posts: true },
         });
 
         if (!user) throw new NotFoundError("User not found");
