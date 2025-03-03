@@ -30,6 +30,15 @@ router.get("/", async (req, res, next) => {
         const resources = await prisma.resource.findMany({
             where: filters,
             orderBy: { name: "asc" },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                url: true,
+                approved: true,
+                userId: true,
+                types: true
+            }
         });
         return res.json({ resources });
     } catch (err) {
@@ -61,10 +70,16 @@ router.get("/types", async function (req, res, next) {
 
 router.get("/:resource_id", async (req, res, next) => {
     try {
-        const { resource_id } = req.params;
+        console.log(req.params);
+        const resource_id = parseInt(req.params.resource_id, 10); // Convert to Int
+
+        if (isNaN(resource_id)) {
+            throw new BadRequestError("Invalid resource ID.");
+        }
 
         const resource = await prisma.resource.findUnique({
-            where: { id: resource_id }
+            select: { name: true, description: true, url: true, types: true, user: true },
+            where: { id: resource_id },
         });
         return res.json({ resource });
     } catch (err) {
@@ -185,7 +200,7 @@ router.post("/", async (req, res, next) => {
                 approved: false,
                 user: userId ? { connect: { id: userId } } : undefined,
                 types: {
-                    connect: types.map(t => ({ name: t })) // 👈 Connect existing types
+                    connect: types.map(t => ({ name: t }))
                 }
             },
         });
@@ -196,8 +211,8 @@ router.post("/", async (req, res, next) => {
     }
 });
 
-/** PATCH /resources/:resource_id → Edit resource (admin only) */
-router.patch("/:resource_id/edit", ensureAdmin, async (req, res, next) => {
+/** PATCH /resources/:resource_id → Edit/update resource (admin only) */
+router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
     try {
         const { resource_id } = req.params;
         const { name, description, url, approved, type } = req.body;
