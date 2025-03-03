@@ -66,14 +66,16 @@ router.get("/tags", async function (req, res, next) {
  */
 router.post("/", ensureLoggedIn, async function (req, res, next) {
     try {
-        const parsedBody = postSchema.parse(req.body.post);
+        const { title, content, tags, userId } = req.body;
 
         const post = await prisma.post.create({
             data: {
-                title: parsedBody.title,
-                content: parsedBody.content,
-                tags: parsedBody.tags || [],
-                user: req.body.user
+                title,
+                content,
+                tags: {
+                    connect: tags.map(t => ({ tag: t }))
+                },
+                user: userId ? { connect: { id: userId } } : undefined
             },
         });
 

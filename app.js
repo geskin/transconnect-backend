@@ -12,6 +12,7 @@ const authRoutes = require("./routes/auth");
 const resourcesRoutes = require("./routes/resources");
 const usersRoutes = require("./routes/users");
 const postsRoutes = require("./routes/posts");
+const bathroomRoutes = require("./routes/bathrooms");
 
 const morgan = require("morgan");
 
@@ -26,6 +27,7 @@ app.use("/auth", authRoutes);
 app.use("/resources", resourcesRoutes);
 app.use("/users", usersRoutes);
 app.use("/posts", postsRoutes);
+app.use("/bathrooms", bathroomRoutes);
 
 
 /** Handle 404 errors -- this matches everything */
