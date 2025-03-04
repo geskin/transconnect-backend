@@ -22,18 +22,37 @@ const commentSchema = z.object({
     content: z.string().min(1, "Comment cannot be empty"),
 });
 
-/** GET /posts?tag=optionalTag
+/** GET /posts?tag=optionalTag or /posts?searchTerm=optionalSearchTerm
  *  Get all posts or filter by a specific tag.
  */
 router.get("/", async function (req, res, next) {
     try {
-        const { tag } = req.query;
+        const { tag, search } = req.query;
 
-        const whereConditions = tag ? { tags: { some: { name: tag } } } : {};
+        const whereConditions = {};
+
+        if (tag) {
+            whereConditions.tags = { some: { name: tag } };
+        }
+
+        if (search) {
+            whereConditions.OR = [
+                { title: { contains: search, mode: "insensitive" } },
+                { content: { contains: search, mode: "insensitive" } }
+            ];
+        }
 
         const posts = await prisma.post.findMany({
             where: whereConditions,
-            select: { title: true, content: true, user: true, createdAt: true, comments: true, tags: true }
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                user: true,
+                createdAt: true,
+                comments: true,
+                tags: true
+            }
         });
 
         return res.json({ posts });
@@ -163,8 +182,10 @@ router.delete("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, n
 /** GET /posts/:post_id/comments
  *
  * Gets all comments for a specific post.
+ * 
+ * Authorization required: Logged in user
  */
-router.get("/:post_id/comments", async function (req, res, next) {
+router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
     try {
         const comments = await prisma.comment.findMany({
             where: { postId: Number(req.params.post_id) },
@@ -185,6 +206,7 @@ router.get("/:post_id/comments", async function (req, res, next) {
 router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
     try {
         const parsedBody = commentSchema.parse(req.body);
+        console.debug(parsedBody);
 
         const comment = await prisma.comment.create({
             data: {
