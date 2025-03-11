@@ -24,15 +24,19 @@ const commentSchema = z.object({
 
 /** GET /posts?tag=optionalTag or /posts?searchTerm=optionalSearchTerm
  *  Get all posts or filter by a specific tag.
+ * 
+ * authorization required: logged in user
  */
-router.get("/", async function (req, res, next) {
+router.get("/", ensureLoggedIn, async function (req, res, next) {
     try {
         const { tag, search } = req.query;
 
         const whereConditions = {};
 
         if (tag) {
-            whereConditions.tags = { some: { name: tag } };
+            whereConditions.tags = {
+                some: { name: { in: Array.isArray(tag) ? tag : [tag] } }  // Support multiple tags
+            };
         }
 
         if (search) {
@@ -44,6 +48,7 @@ router.get("/", async function (req, res, next) {
 
         const posts = await prisma.post.findMany({
             where: whereConditions,
+            orderBy: { createdAt: "desc" },  // Order newest posts first
             select: {
                 id: true,
                 title: true,
@@ -77,6 +82,68 @@ router.get("/tags", async function (req, res, next) {
     }
 });
 
+/** GET /posts/users/:user_id
+ * Get all posts made by a specific user
+ * 
+ * Authorization required: logged in user
+ */
+
+router.get("/users/:user_id", ensureLoggedIn, async function (req, res, next) {
+    try {
+        const posts = await prisma.post.findMany({
+            where: { userId: Number(req.params.user_id) },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                user: true,
+                createdAt: true,
+                comments: true,
+                tags: true
+            }
+        });
+
+        return res.json({ posts });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /posts/:post_id 
+ * 
+ * Gets a specific post (and its associated comments?)
+ * authorization required: logged in
+*/
+
+router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
+    try {
+        const post = await prisma.post.findUnique({
+            where: { id: Number(req.params.post_id) },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                userId: true,
+                user: true,
+                createdAt: true,
+                comments: true,
+                tags: true
+            }
+        });
+        console.debug(post);
+        return res.json({ post });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return next(new BadRequestError(err.errors.map(e => e.message)));
+        }
+        if (err.code === "P2025") {
+            return next(new NotFoundError("Post not found"));
+        }
+        return next(err);
+    }
+});
+
 
 /** POST /posts
  *
@@ -92,7 +159,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
                 title,
                 content,
                 tags: {
-                    connect: tags.map(t => ({ tag: t }))
+                    connect: tags.map(t => ({ name: t }))
                 },
                 user: userId ? { connect: { id: userId } } : undefined
             },
@@ -107,30 +174,6 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
     }
 });
 
-/** GET /posts/:post_id 
- * 
- * Gets a specific post (and its associated comments?)
- * authorization required: logged in
-*/
-
-router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
-    try {
-        const post = await prisma.post.findUnique({
-            where: { id: Number(req.params.post_id) }
-        });
-        console.debug(post);
-        return res.json({ post });
-    } catch (err) {
-        if (err instanceof z.ZodError) {
-            return next(new BadRequestError(err.errors.map(e => e.message)));
-        }
-        if (err.code === "P2025") {
-            return next(new NotFoundError("Post not found"));
-        }
-        return next(err);
-    }
-});
-
 /** PATCH /posts/:post_id → /users/:username/posts/:post_id
  *
  * Updates a specific post.
@@ -139,6 +182,7 @@ router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
 router.patch("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
     try {
         const parsedBody = postSchema.partial().parse(req.body);
+        console.log(parsedBody);
 
         const post = await prisma.post.update({
             where: { id: Number(req.params.post_id) },
@@ -189,7 +233,15 @@ router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next)
     try {
         const comments = await prisma.comment.findMany({
             where: { postId: Number(req.params.post_id) },
-            include: { author: { select: { username: true } } },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                postId: true,
+                author: {
+                    select: { username: true }
+                }
+            }
         });
 
         return res.json({ comments });
@@ -198,6 +250,50 @@ router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next)
     }
 });
 
+/** GET /posts/:post_id/comments/:comment_id
+ * 
+ * Gets one specific comment from a post
+ * 
+ * Authorization required: logged in user
+ */
+
+router.get("/:post_id/comments/:comment_id", ensureLoggedIn, async function (req, res, next) {
+    try {
+        // Ensure the post exists
+        const post = await prisma.post.findUnique({
+            where: { id: Number(req.params.post_id) }
+        });
+
+        if (!post) {
+            return next(new NotFoundError("Post not found"));
+        }
+
+        // Fetch the comment
+        const comment = await prisma.comment.findUnique({
+            where: { id: Number(req.params.comment_id) }
+        });
+
+        if (!comment) {
+            return next(new NotFoundError("Comment not found"));
+        }
+
+        if (comment.postId !== post.id) {
+            return next(new BadRequestError("Comment does not belong to the specified post"));
+        }
+
+        return res.json({ comment });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return next(new BadRequestError(err.errors.map(e => e.message)));
+        }
+        if (err.code === "P2025") {
+            return next(new NotFoundError("Comment not found"));
+        }
+        return next(err);
+    }
+});
+
+
 /** POST /posts/:post_id/comments
  *
  * Adds a new comment to a post.
@@ -205,14 +301,13 @@ router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next)
  */
 router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
     try {
-        const parsedBody = commentSchema.parse(req.body);
-        console.debug(parsedBody);
+        const { content, authorId } = req.body;
 
         const comment = await prisma.comment.create({
             data: {
-                content: parsedBody.content,
+                content,
                 postId: Number(req.params.post_id),
-                author: req.body.user,
+                authorId,
             },
         });
 

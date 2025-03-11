@@ -78,7 +78,7 @@ router.get("/:resource_id", async (req, res, next) => {
         }
 
         const resource = await prisma.resource.findUnique({
-            select: { name: true, description: true, url: true, types: true, user: true },
+            select: { name: true, description: true, url: true, types: true, user: true, approved: true },
             where: { id: resource_id },
         });
         return res.json({ resource });
@@ -215,26 +215,31 @@ router.post("/", async (req, res, next) => {
 router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
     try {
         const { resource_id } = req.params;
-        const { name, description, url, approved, type } = req.body;
+        const { name, description, url, approved, types } = req.body;
+
+        let dataToUpdate = {};
+        if (name !== undefined) dataToUpdate.name = name;
+        if (description !== undefined) dataToUpdate.description = description;
+        if (url !== undefined) dataToUpdate.url = url;
+        if (approved !== undefined) dataToUpdate.approved = approved;
+        if (types !== undefined) {
+            dataToUpdate.types = { connect: types.map((t) => ({ name: t })) };
+        }
 
         const resource = await prisma.resource.update({
             where: { id: parseInt(resource_id) },
-            data: {
-                name,
-                description,
-                url,
-                approved,
-                type: type ? { connect: type.map((t) => ({ name: t })) } : undefined,
-            },
+            data: dataToUpdate,
         });
 
         return res.json({ resource });
     } catch (err) {
+        console.error("Error updating resource:", err);
         return next(err);
     }
 });
 
-/** DELETE /resources/:resource_id → Delete resource (admin only) */
+
+/** DELETE /resources/:resource_id --> Delete resource (admin only) */
 router.delete("/:resource_id", ensureAdmin, async (req, res, next) => {
     try {
         const { resource_id } = req.params;

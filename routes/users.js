@@ -110,7 +110,7 @@ router.patch("/:username", ensureCorrectUserOrAdmin, async function (req, res, n
         const user = await prisma.user.update({
             where: { username: req.params.username },
             data: updateData,
-            select: { username: true, email: true, pronouns: true, role: true },
+            select: { username: true, email: true, pronouns: true, bio: true, role: true },
         });
 
         return res.json({ user });
