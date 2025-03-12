@@ -359,14 +359,21 @@ router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next
  */
 router.patch("/:post_id/comments/:comment_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
     try {
-        const parsedBody = commentSchema.partial().parse(req.body);
+        const { comment, username } = req.body;
+        console.log("Extracted post:", comment, "User username:", username);
 
-        const comment = await prisma.comment.update({
+        console.log("in backend route comment:", comment);
+
+        const updatedComment = await prisma.comment.update({
             where: { id: Number(req.params.comment_id) },
-            data: parsedBody,
+            data: {
+                content: comment
+            },
         });
 
-        return res.json({ comment });
+        console.log("updated comment in backend", updatedComment);
+
+        return res.json({ updatedComment });
     } catch (err) {
         if (err instanceof z.ZodError) {
             return next(new BadRequestError(err.errors.map(e => e.message)));
