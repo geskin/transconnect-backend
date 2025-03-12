@@ -180,16 +180,28 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  * Authorization required: Correct user or admin.
  */
 router.patch("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
-    try {
-        const parsedBody = postSchema.partial().parse(req.body);
-        console.log(parsedBody);
+    console.log("Raw request body:", req.body);
 
-        const post = await prisma.post.update({
+    try {
+        const { post, username } = req.body;
+        console.log("Extracted post:", post, "User ID:", username);
+
+        // Validate the extracted post object
+        const parsedBody = postSchema.partial().parse(post);
+        console.log("Parsed body:", parsedBody);
+
+        const updatedPost = await prisma.post.update({
             where: { id: Number(req.params.post_id) },
-            data: parsedBody,
+            data: {
+                title: parsedBody.title,
+                content: parsedBody.content,
+                tags: parsedBody.tags
+                    ? { set: parsedBody.tags.map(tag => ({ name: tag.name })) }
+                    : undefined
+            },
         });
 
-        return res.json({ post });
+        return res.json({ post: updatedPost });
     } catch (err) {
         if (err instanceof z.ZodError) {
             return next(new BadRequestError(err.errors.map(e => e.message)));
@@ -302,6 +314,15 @@ router.get("/:post_id/comments/:comment_id", ensureLoggedIn, async function (req
 router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
     try {
         const { content, authorId } = req.body;
+
+        // Check if the post exists by its post_id before creating a comment
+        const post = await prisma.post.findUnique({
+            where: { id: Number(req.params.post_id) }
+        });
+
+        if (!post) {
+            return next(new NotFoundError('Post not found'));
+        }
 
         const comment = await prisma.comment.create({
             data: {

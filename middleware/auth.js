@@ -51,7 +51,10 @@ function ensureLoggedIn(req, res, next) {
 
 function ensureAdmin(req, res, next) {
     try {
-        if (!res.locals.user || res.locals.user.role !== 'ADMIN') {
+        const user = res.locals.user;
+        if (!user) throw new UnauthorizedError();
+
+        if (user.role !== 'ADMIN') {
             throw new UnauthorizedError();
         }
         return next();
@@ -60,30 +63,52 @@ function ensureAdmin(req, res, next) {
     }
 }
 
-/** Middleware to use when they must provide a valid token & be user matching
- *  username or userId provided as route param.
+function ensureCorrectUser(req, res, next) {
+    try {
+        const user = res.locals.user;
+        if (!user) throw new UnauthorizedError();
+        const { username, userId } = req.params;
+        if (user.username !== username || user.id !== userId) {
+            throw new UnauthorizedError();
+        }
+        return next();
+    } catch (err) {
+        return next(err);
+    }
+}
+
+/** Middleware to ensure user is correct user or admin.
  *
- *  If not, raises Unauthorized.
+ *  Works when username or userId is provided as a route param.
+ *  If not authorized, raises Unauthorized.
  */
 
 function ensureCorrectUserOrAdmin(req, res, next) {
     try {
         const user = res.locals.user;
-        const { username, userId } = req.params;
+        const paramUsername = req.params.username;
+        const bodyUsername = req.body.username;
 
-        if (!(user && (user.role === 'ADMIN' && (user.username === username || user.id === userId)))) {
+        console.log("User:", user);
+        console.log("Param Username:", paramUsername);
+        console.log("Body Username:", bodyUsername);
+
+        if (!user) throw new UnauthorizedError();
+
+        if (user.role !== "ADMIN" && user.username !== paramUsername && user.username !== bodyUsername) {
             throw new UnauthorizedError();
         }
+
         return next();
     } catch (err) {
         return next(err);
     }
 }
 
-
 module.exports = {
     authenticateJWT,
     ensureLoggedIn,
     ensureAdmin,
+    ensureCorrectUser,
     ensureCorrectUserOrAdmin,
 };

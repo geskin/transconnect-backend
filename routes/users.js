@@ -20,13 +20,16 @@ const userNewSchema = z.object({
     email: z.string().email().optional(),
     password: z.string().min(6),
     pronouns: z.string().optional(),
+    bio: z.string().optional(),
     role: z.enum(["USER", "ADMIN"]).default("USER"),
 });
 
 const userUpdateSchema = z.object({
+    username: z.string().min(3).optional(),
     email: z.string().email().optional(),
     password: z.string().min(6).optional(),
     pronouns: z.string().optional(),
+    bio: z.string().optional(),
     role: z.enum(["USER", "ADMIN"]).optional(),
 });
 
