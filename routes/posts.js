@@ -181,24 +181,35 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  */
 router.patch("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
     console.log("Raw request body:", req.body);
-
     try {
         const { post, username } = req.body;
         console.log("Extracted post:", post, "User ID:", username);
 
-        // Validate the extracted post object
         const parsedBody = postSchema.partial().parse(post);
         console.log("Parsed body:", parsedBody);
 
+        let dataToUpdate = {
+            title: parsedBody.title,
+            content: parsedBody.content
+        };
+
+        if (parsedBody.tags !== undefined) {
+            dataToUpdate.tags = {
+                connect: parsedBody.tags.map((t) => ({ name: t })),
+                disconnect: await prisma.post.findUnique({
+                    where: { id: Number(req.params.post_id) },
+                    select: { tags: true }
+                }).then((post) => {
+                    const currentTags = post?.tags.map(t => t.name) || [];
+                    const tagsToDisconnect = currentTags.filter(t => !parsedBody.tags.includes(t));
+                    return tagsToDisconnect.map(t => ({ name: t }));
+                })
+            };
+        }
+
         const updatedPost = await prisma.post.update({
             where: { id: Number(req.params.post_id) },
-            data: {
-                title: parsedBody.title,
-                content: parsedBody.content,
-                tags: parsedBody.tags
-                    ? { set: parsedBody.tags.map(tag => ({ name: tag.name })) }
-                    : undefined
-            },
+            data: dataToUpdate,
         });
 
         return res.json({ post: updatedPost });
@@ -374,11 +385,24 @@ router.patch("/:post_id/comments/:comment_id", ensureCorrectUserOrAdmin, async f
  */
 router.delete("/:post_id/comments/:comment_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
     try {
-        await prisma.comment.delete({
-            where: { id: Number(req.params.comment_id) },
+        const { post_id, comment_id } = req.params;
+
+        const comment = await prisma.comment.findFirst({
+            where: {
+                id: Number(comment_id),
+                postId: Number(post_id),
+            },
         });
 
-        return res.json({ deleted: req.params.comment_id });
+        if (!comment) {
+            return next(new NotFoundError("Comment not found or does not belong to the specified post"));
+        }
+
+        await prisma.comment.delete({
+            where: { id: Number(comment_id) },
+        });
+
+        return res.json({ deleted: comment_id });
     } catch (err) {
         if (err.code === "P2025") {
             return next(new NotFoundError("Comment not found"));

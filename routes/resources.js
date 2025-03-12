@@ -211,19 +211,32 @@ router.post("/", async (req, res, next) => {
     }
 });
 
-/** PATCH /resources/:resource_id → Edit/update resource (admin only) */
+/** PATCH /resources/:resource_id --> Edit/update resource (admin only) */
 router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
     try {
         const { resource_id } = req.params;
         const { name, description, url, approved, types } = req.body;
 
         let dataToUpdate = {};
+
         if (name !== undefined) dataToUpdate.name = name;
         if (description !== undefined) dataToUpdate.description = description;
         if (url !== undefined) dataToUpdate.url = url;
         if (approved !== undefined) dataToUpdate.approved = approved;
+
         if (types !== undefined) {
-            dataToUpdate.types = { connect: types.map((t) => ({ name: t })) };
+            // Disconnect types that are unchecked (not present in the updated list)
+            dataToUpdate.types = {
+                connect: types.map((t) => ({ name: t })),
+                disconnect: await prisma.resource.findUnique({
+                    where: { id: parseInt(resource_id) },
+                    select: { types: true }
+                }).then((resource) => {
+                    const currentTypes = resource?.types.map(t => t.name) || [];
+                    const typesToDisconnect = currentTypes.filter(t => !types.includes(t));
+                    return typesToDisconnect.map(t => ({ name: t }));
+                })
+            };
         }
 
         const resource = await prisma.resource.update({
@@ -237,7 +250,6 @@ router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
         return next(err);
     }
 });
-
 
 /** DELETE /resources/:resource_id --> Delete resource (admin only) */
 router.delete("/:resource_id", ensureAdmin, async (req, res, next) => {
