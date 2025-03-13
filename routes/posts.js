@@ -154,6 +154,8 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
     try {
         const { title, content, tags, userId } = req.body;
 
+        console.log("posts post route userId:", userId);
+
         const post = await prisma.post.create({
             data: {
                 title,

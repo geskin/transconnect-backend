@@ -70,6 +70,7 @@ router.post("/register", async function (req, res, next) {
         });
 
         const token = createToken(newUser);
+        console.log("created user with token:", token);
         return res.status(201).json({ token });
     } catch (err) {
         if (err instanceof z.ZodError) {
