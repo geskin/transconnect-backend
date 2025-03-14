@@ -63,6 +63,8 @@ function ensureAdmin(req, res, next) {
     }
 }
 
+/** Middleware to ensure user is correct */
+
 function ensureCorrectUser(req, res, next) {
     try {
         const user = res.locals.user;

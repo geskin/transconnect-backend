@@ -11,7 +11,6 @@ const { BadRequestError, NotFoundError } = require("../expressError");
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/** Define validation schemas using Zod */
 const postSchema = z.object({
     title: z.string().min(1, "Post title cannot be empty"),
     content: z.string().min(1, "Post content cannot be empty"),
@@ -35,7 +34,7 @@ router.get("/", ensureLoggedIn, async function (req, res, next) {
 
         if (tag) {
             whereConditions.tags = {
-                some: { name: { in: Array.isArray(tag) ? tag : [tag] } }  // Support multiple tags
+                some: { name: { in: Array.isArray(tag) ? tag : [tag] } }
             };
         }
 
@@ -48,7 +47,7 @@ router.get("/", ensureLoggedIn, async function (req, res, next) {
 
         const posts = await prisma.post.findMany({
             where: whereConditions,
-            orderBy: { createdAt: "desc" },  // Order newest posts first
+            orderBy: { createdAt: "desc" },
             select: {
                 id: true,
                 title: true,

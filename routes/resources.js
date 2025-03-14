@@ -9,9 +9,7 @@ const { BadRequestError, ForbiddenError, NotFoundError } = require("../expressEr
 const prisma = new PrismaClient();
 const router = express.Router();
 
-const BATHROOM_API_BASE_URL = "https://www.refugerestrooms.org/api/v1/restrooms"; //by_location?page=1&per_page=50&offset=0&unisex=true
-
-/** GET /resources → Get all resources, sorted alphabetically 
+/** GET /resources --> Get all resources, sorted alphabetically 
  * optionally sort by search input or tag selection
  * no auth required
 */
@@ -87,109 +85,15 @@ router.get("/:resource_id", async (req, res, next) => {
     }
 });
 
-/** GET /resources/search?nameLike=query&location=location&type=type
- * Search resources by name, location, and/or type.
- */
-router.get("/search", async (req, res, next) => {
-    try {
-        const { nameLike, location, type } = req.query;
-
-        // Validate that at least one search parameter is provided
-        if (!nameLike && !location && !type) {
-            throw new BadRequestError("At least one of the search parameters (nameLike, location, type) is required.");
-        }
-
-        const whereConditions = {};
-
-        // Name search (case-insensitive partial match)
-        if (nameLike) {
-            whereConditions.name = { contains: nameLike, mode: "insensitive" };
-        }
-
-        // Location search
-        if (location) {
-            whereConditions.location = { contains: location, mode: "insensitive" };
-        }
-
-        // Type search (matching resource types)
-        if (type) {
-            if (type.toLowerCase() === "bathroom") {
-                const response = await axios.get(BATHROOM_API_BASE_URL, {
-                    params: { per_page: 50, unisex: true }, //add functionality for listing ADA accessible unisex bathrooms when queried
-                });
-                return res.json({ bathrooms: response.data });
-            } else {
-                whereConditions.type = { some: { name: type } };
-            }
-        }
-
-        const resources = await prisma.resource.findMany({
-            where: whereConditions,
-        });
-
-        return res.json({ resources });
-    } catch (err) {
-        return next(err);
-    }
-});
-
-
-/** GET /resources/:location → Get resources by location */
-// router.get("/:location", async (req, res, next) => {
-//     try {
-//         const { location } = req.params;
-
-//         const resources = await prisma.resource.findMany({
-//             where: {
-//                 description: { contains: location, mode: "insensitive" },
-//             },
-//         });
-
-//         return res.json({ resources });
-//     } catch (err) {
-//         return next(err);
-//     }
-// });
-
-// /** GET /resources/:type → Get resources by type */
-// router.get("/:type", async (req, res, next) => {
-//     try {
-//         const { type } = req.params;
-
-//         // Bathrooms → Fetch from Refuge Restrooms API instead
-//         if (type.toLowerCase() === "bathroom") {
-//             const response = await axios.get(BATHROOM_API_BASE_URL, {
-//                 params: { per_page: 50, unisex: true }, //add functionality for listing ADA accessible unisex bathrooms when queried
-//             });
-//             return res.json({ bathrooms: response.data });
-//         }
-
-//         const resources = await prisma.resource.findMany({
-//             where: { type: { some: { name: type } } },
-//         });
-
-//         return res.json({ resources });
-//     } catch (err) {
-//         return next(err);
-//     }
-// });
-
 /** POST /resources
  * 
- * creates a resource
- * 
- * Bathroom resources must be added via the Refuge Restrooms API */
+ * creates a resource */
 router.post("/", async (req, res, next) => {
     try {
         const { name, description, url, types, userId, user } = req.body;
 
         if (!name || !types) {
             throw new BadRequestError("name and type are required.");
-        }
-
-        //throw pop up alert that includes link to Refuge API
-        if (types.includes("bathroom")) {
-            throw new ForbiddenError("Please add bathrooms via the Refuge Restrooms API, not this page.");
         }
 
         const resource = await prisma.resource.create({
@@ -225,7 +129,6 @@ router.patch("/:resource_id", ensureAdmin, async (req, res, next) => {
         if (approved !== undefined) dataToUpdate.approved = approved;
 
         if (types !== undefined) {
-            // Disconnect types that are unchecked (not present in the updated list)
             dataToUpdate.types = {
                 connect: types.map((t) => ({ name: t })),
                 disconnect: await prisma.resource.findUnique({
