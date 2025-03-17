@@ -344,6 +344,8 @@ router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next
             },
         });
 
+        //write a select query for grabbing the new comment with author username to display on frontend
+
         return res.status(201).json({ comment });
     } catch (err) {
         if (err instanceof z.ZodError) {

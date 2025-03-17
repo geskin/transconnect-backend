@@ -1,23 +1,23 @@
 "use strict";
+
 /** Database setup for transconnect. */
-const { Client } = require("pg");
-const { getDatabaseUri } = require("./config");
+const { PrismaClient } = require('@prisma/client');
+const { getDatabaseUri } = require('./config');
 
 let db;
 
 if (process.env.NODE_ENV === "production") {
-    db = new Client({
-        connectionString: getDatabaseUri(),
-        ssl: {
-            rejectUnauthorized: false
-        }
+    db = new PrismaClient({
+        datasources: {
+            db: {
+                url: getDatabaseUri(),
+            },
+        },
     });
 } else {
-    db = new Client({
-        connectionString: getDatabaseUri()
-    });
+    db = new PrismaClient();
 }
 
-db.connect();
+db.$connect();
 
 module.exports = db;
