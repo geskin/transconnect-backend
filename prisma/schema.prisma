@@ -28,7 +28,7 @@ model User {
   id        Int        @id @default(autoincrement())
   createdAt DateTime   @default(now())
   editedAt  DateTime   @default(now()) @db.Timestamp(6)
-  email     String?    @unique
+  email     String?    @unique // @validate(regex: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
   username  String     @unique
   password  String
   pronouns  String?

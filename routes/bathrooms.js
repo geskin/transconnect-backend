@@ -10,15 +10,19 @@ const BATHROOM_API_BASE_URL = "https://www.refugerestrooms.org/api/v1/restrooms"
 
 const API_BASE_URI_FOR_DEV = `${BATHROOM_API_BASE_URL}/by_location?page=1&per_page=50&offset=0&unisex=true&lat=40.776676&lng=-73.971321`
 
-/** GET /bathrooms → Get all public, unisex bathrooms
+/** GET /bathrooms --> Get all public, unisex bathrooms
  * Optionally sort by location and/or accessibility
  * No auth required
  */
 router.get("/", async (req, res, next) => {
     try {
-        const { location, accessibility } = req.query;
+        let { location, accessibility } = req.query;
 
         const isAccessible = accessibility === "true"; // convert to boolean since will read any non-empty string as truthy
+
+        if (!location) { //if location is undefined provide default NYC coordinates
+            location = "lat=40.776676&lng=-73.971321";
+        }
 
         let apiUrl = `${BATHROOM_API_BASE_URL}/by_location?page=1&per_page=50&offset=0&unisex=true&${location}`;
 

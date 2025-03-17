@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "migrate:test": "DATABASE_URL=$TEST_DATABASE_URL npx prisma migrate dev",
     "test": "jest",
     "start": "node server.js"
   },

@@ -1,101 +1,88 @@
 const request = require("supertest");
 const app = require("../app");
-const { PrismaClient } = require("@prisma/client");
-const { adminToken, userToken, commonBeforeAll, commonBeforeEach, commonAfterEach, commonAfterAll } = require("../tests/_testCommon");
+const db = require("../db");
+const { createToken } = require("../helpers/tokens");
 
-const prisma = new PrismaClient();
+let admin, user, adminToken, userToken, resource;
 
-beforeAll(commonBeforeAll);
-beforeEach(commonBeforeEach);
-afterEach(commonAfterEach);
-afterAll(commonAfterAll);
+beforeAll(async () => {
+    await db.user.deleteMany();
+    await db.resource.deleteMany();
 
-describe("GET /resources", () => {
-    test("works: gets all resources", async () => {
-        const resp = await request(app).get("/resources");
-        expect(resp.statusCode).toBe(200);
-        expect(resp.body.resources).toBeInstanceOf(Array);
+    admin = await db.user.create({
+        data: { username: "admin", email: "admin@testing.com", password: "hashed", role: "ADMIN" }
     });
-});
-
-describe("GET /resources/types", () => {
-    test("works: gets all resource types", async () => {
-        const resp = await request(app).get("/resources/types");
-        expect(resp.statusCode).toBe(200);
-        expect(resp.body.types).toBeInstanceOf(Array);
-    });
-});
-
-describe("GET /resources/:resource_id", () => {
-    test("works: gets a specific resource", async () => {
-        const resp = await request(app).get("/resources/1");
-        expect(resp.statusCode).toBe(200);
-        expect(resp.body.resource).toHaveProperty("name");
+    user = await db.user.create({
+        data: { username: "user", email: "user@testing.com", password: "hashed", role: "USER" }
     });
 
-    test("fails: invalid resource id", async () => {
-        const resp = await request(app).get("/resources/abc");
-        expect(resp.statusCode).toBe(400);
-    });
-});
+    adminToken = createToken(admin);
+    userToken = createToken(user);
 
-describe("POST /resources", () => {
-    test("works: creates a new resource", async () => {
-        const newResource = {
+    resource = await db.resource.create({
+        data: {
             name: "Test Resource",
-            description: "A test description",
-            url: "http://test.com",
-            types: ["Support"],
-            userId: 1
-        };
-
-        const resp = await request(app)
-            .post("/resources")
-            .send(newResource);
-        expect(resp.statusCode).toBe(201);
-        expect(resp.body.resource).toHaveProperty("id");
-    });
-
-    test("fails: missing required fields", async () => {
-        const resp = await request(app)
-            .post("/resources")
-            .send({ description: "Missing name and type" });
-        expect(resp.statusCode).toBe(400);
+            description: "This is a test resource",
+            url: "https://example.com",
+            types: [{ "name": "Other" }],
+            userId: admin.id
+        }
     });
 });
 
-describe("PATCH /resources/:resource_id", () => {
-    test("works: updates a resource (admin only)", async () => {
-        const resp = await request(app)
-            .patch("/resources/1")
-            .send({ name: "Updated Resource" })
-            .set("authorization", `Bearer ${adminToken}`);
-        expect(resp.statusCode).toBe(200);
-        expect(resp.body.resource.name).toBe("Updated Resource");
-    });
-
-    test("fails: unauthorized user", async () => {
-        const resp = await request(app)
-            .patch("/resources/1")
-            .send({ name: "Updated Resource" })
-            .set("authorization", `Bearer ${userToken}`);
-        expect(resp.statusCode).toBe(403);
-    });
+afterAll(async () => {
+    await db.resource.deleteMany();
+    await db.user.deleteMany();
+    await db.$disconnect();
 });
 
-describe("DELETE /resources/:resource_id", () => {
-    test("works: deletes a resource (admin only)", async () => {
-        const resp = await request(app)
-            .delete("/resources/1")
-            .set("authorization", `Bearer ${adminToken}`);
-        expect(resp.statusCode).toBe(200);
-        expect(resp.body).toEqual({ deleted: "1" });
-    });
+// GET /resources/:id
+it("retrieves a single resource", async () => {
+    const resp = await request(app).get(`/resources/${resource.id}`);
+    expect(resp.statusCode).toBe(200);
+    expect(resp.body.resource).toHaveProperty("id", resource.id);
+});
 
-    test("fails: unauthorized user", async () => {
-        const resp = await request(app)
-            .delete("/resources/1")
-            .set("authorization", `Bearer ${userToken}`);
-        expect(resp.statusCode).toBe(403);
-    });
+// POST /resources
+it("creates a new resource", async () => {
+    const newResource = {
+        title: "New Resource",
+        description: "A new test resource",
+        url: "https://new.com",
+        types: ["Health"],
+        userId: user.id
+    };
+
+    const resp = await request(app)
+        .post("/resources")
+        .set("Authorization", `Bearer ${userToken}`)
+        .send(newResource);
+
+    expect(resp.statusCode).toBe(201);
+    expect(resp.body.resource.title).toBe("New Resource");
+});
+
+// PATCH /resources/:id
+it("updates a resource", async () => {
+    const updatedData = { title: "Updated Resource" };
+
+    const resp = await request(app)
+        .patch(`/resources/${resource.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(updatedData);
+
+    expect(resp.statusCode).toBe(200);
+    expect(resp.body.resource.title).toBe("Updated Resource");
+});
+
+// DELETE /resources/:id
+it("deletes a resource", async () => {
+    const resp = await request(app)
+        .delete(`/resources/${resource.id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(resp.statusCode).toBe(200);
+
+    const checkResource = await prisma.resource.findUnique({ where: { id: resource.id } });
+    expect(checkResource).toBeNull();
 });

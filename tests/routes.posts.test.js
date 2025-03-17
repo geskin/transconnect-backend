@@ -3,20 +3,15 @@
 const request = require("supertest");
 const app = require("../app");
 
-const {
-    commonBeforeAll,
-    commonBeforeEach,
-    commonAfterEach,
-    commonAfterAll,
-    testPostIds,
-    u1Token,
-    adminToken,
-} = require("./_testCommon");
+const { commonBeforeAll, commonAfterAll, testPostIds, u1Token, adminToken } = require("./_testCommon");
 
-beforeAll(commonBeforeAll);
-beforeEach(commonBeforeEach);
-afterEach(commonAfterEach);
-afterAll(commonAfterAll);
+beforeAll(async () => {
+    await commonBeforeAll();
+});
+
+afterAll(async () => {
+    await commonAfterAll();
+});
 
 /************************************** POST /posts */
 
@@ -73,6 +68,8 @@ describe("GET /posts", function () {
 
 describe("GET /posts/:id", function () {
     test("works for logged-in user", async function () {
+        expect(testPostIds.length).toBeGreaterThan(0);
+
         const resp = await request(app)
             .get(`/posts/${testPostIds[0]}`)
             .set("authorization", `Bearer ${u1Token}`);
@@ -91,6 +88,8 @@ describe("GET /posts/:id", function () {
 
 describe("PATCH /posts/:id", function () {
     test("works for correct user or admin", async function () {
+        expect(testPostIds.length).toBeGreaterThan(0);
+
         const resp = await request(app)
             .patch(`/posts/${testPostIds[0]}`)
             .send({ title: "Updated Title" })
@@ -100,6 +99,8 @@ describe("PATCH /posts/:id", function () {
     });
 
     test("unauth for anon", async function () {
+        expect(testPostIds.length).toBeGreaterThan(0);
+
         const resp = await request(app)
             .patch(`/posts/${testPostIds[0]}`)
             .send({ title: "Updated Title" });
@@ -119,6 +120,8 @@ describe("PATCH /posts/:id", function () {
 
 describe("DELETE /posts/:id", function () {
     test("works for correct user or admin", async function () {
+        expect(testPostIds.length).toBeGreaterThan(0);
+
         const resp = await request(app)
             .delete(`/posts/${testPostIds[0]}`)
             .set("authorization", `Bearer ${u1Token}`);
@@ -126,6 +129,8 @@ describe("DELETE /posts/:id", function () {
     });
 
     test("unauth for anon", async function () {
+        expect(testPostIds.length).toBeGreaterThan(0);
+
         const resp = await request(app).delete(`/posts/${testPostIds[0]}`);
         expect(resp.statusCode).toEqual(401);
     });
