@@ -33,9 +33,7 @@ router.get("/", ensureLoggedIn, async function (req, res, next) {
         const whereConditions = {};
 
         if (tag) {
-            whereConditions.tags = {
-                some: { name: { in: Array.isArray(tag) ? tag : [tag] } }
-            };
+            whereConditions.tags = { some: { name: tag } };
         }
 
         if (search) {
