@@ -130,7 +130,6 @@ router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
                 tags: true
             }
         });
-        console.debug(post);
         return res.json({ post });
     } catch (err) {
         if (err instanceof z.ZodError) {
@@ -152,8 +151,6 @@ router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
 router.post("/", ensureLoggedIn, async function (req, res, next) {
     try {
         const { title, content, tags, userId } = req.body;
-
-        console.log("posts post route userId:", userId);
 
         const post = await prisma.post.create({
             data: {
@@ -184,10 +181,10 @@ router.patch("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, ne
     console.log("Raw request body:", req.body);
     try {
         const { post, username } = req.body;
-        console.log("Extracted post:", post, "User ID:", username);
+        // console.log("Extracted post:", post, "User ID:", username);
 
         const parsedBody = postSchema.partial().parse(post);
-        console.log("Parsed body:", parsedBody);
+        // console.log("Parsed body:", parsedBody);
 
         let dataToUpdate = {
             title: parsedBody.title,
@@ -363,9 +360,7 @@ router.post("/:post_id/comments", ensureLoggedIn, async function (req, res, next
 router.patch("/:post_id/comments/:comment_id", ensureCorrectUserOrAdmin, async function (req, res, next) {
     try {
         const { comment, username } = req.body;
-        console.log("Extracted post:", comment, "User username:", username);
-
-        console.log("in backend route comment:", comment);
+        // console.log("Extracted post:", comment, "User username:", username);
 
         const updatedComment = await prisma.comment.update({
             where: { id: Number(req.params.comment_id) },
@@ -374,7 +369,7 @@ router.patch("/:post_id/comments/:comment_id", ensureCorrectUserOrAdmin, async f
             },
         });
 
-        console.log("updated comment in backend", updatedComment);
+        // console.log("updated comment in backend", updatedComment);
 
         return res.json({ updatedComment });
     } catch (err) {

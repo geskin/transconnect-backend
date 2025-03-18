@@ -91,9 +91,9 @@ function ensureCorrectUserOrAdmin(req, res, next) {
         const paramUsername = req.params.username;
         const bodyUsername = req.body.username;
 
-        console.log("User:", user);
-        console.log("Param Username:", paramUsername);
-        console.log("Body Username:", bodyUsername);
+        // console.log("User:", user);
+        // console.log("Param Username:", paramUsername);
+        // console.log("Body Username:", bodyUsername);
 
         if (!user) throw new UnauthorizedError();
 

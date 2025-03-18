@@ -68,7 +68,7 @@ router.get("/types", async function (req, res, next) {
 
 router.get("/:resource_id", async (req, res, next) => {
     try {
-        console.log(req.params);
+        // console.log(req.params);
         const resource_id = parseInt(req.params.resource_id, 10); // Convert to Int
 
         if (isNaN(resource_id)) {
