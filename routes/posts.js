@@ -151,6 +151,13 @@ router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
 router.post("/", ensureLoggedIn, async function (req, res, next) {
     try {
         const { title, content, tags, userId } = req.body;
+        console.log("posts route user id is:", userId);
+
+        const user = await prisma.user.findUnique({
+            where: { id: Number(userId) }
+        });
+
+        console.log("posts route user is:", user);
 
         const post = await prisma.post.create({
             data: {
@@ -159,7 +166,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
                 tags: {
                     connect: tags.map(t => ({ name: t }))
                 },
-                user: userId ? { connect: { id: userId } } : undefined
+                user: user ? user : null // userId ? { connect: { id: userId } } : null
             },
         });
 
