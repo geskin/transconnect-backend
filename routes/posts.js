@@ -124,10 +124,23 @@ router.get("/:post_id", ensureLoggedIn, async function (req, res, next) {
                 userId: true,
                 user: true,
                 createdAt: true,
-                comments: true,
+                // comments: true,
+                comments: {
+                    select: {
+                        authorId: true,
+                        id: true,
+                        content: true,
+                        createdAt: true,
+                        postId: true,
+                        author: {
+                            select: { username: true }
+                        }
+                    }
+                },
                 tags: true
             }
         });
+
         return res.json({ post });
     } catch (err) {
         if (err instanceof z.ZodError) {
@@ -257,26 +270,26 @@ router.delete("/:post_id", ensureCorrectUserOrAdmin, async function (req, res, n
  * 
  * Authorization required: Logged in user
  */
-router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
-    try {
-        const comments = await prisma.comment.findMany({
-            where: { postId: Number(req.params.post_id) },
-            select: {
-                id: true,
-                content: true,
-                createdAt: true,
-                postId: true,
-                author: {
-                    select: { username: true }
-                }
-            }
-        });
+// router.get("/:post_id/comments", ensureLoggedIn, async function (req, res, next) {
+//     try {
+//         const comments = await prisma.comment.findMany({
+//             where: { postId: Number(req.params.post_id) },
+//             select: {
+//                 id: true,
+//                 content: true,
+//                 createdAt: true,
+//                 postId: true,
+//                 author: {
+//                     select: { username: true }
+//                 }
+//             }
+//         });
 
-        return res.json({ comments });
-    } catch (err) {
-        return next(err);
-    }
-});
+//         return res.json({ comments });
+//     } catch (err) {
+//         return next(err);
+//     }
+// });
 
 /** GET /posts/:post_id/comments/:comment_id
  * 

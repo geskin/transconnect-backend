@@ -13,6 +13,7 @@ const resourcesRoutes = require("./routes/resources");
 const usersRoutes = require("./routes/users");
 const postsRoutes = require("./routes/posts");
 const bathroomRoutes = require("./routes/bathrooms");
+const commentsRoutes = require("./routes/comments");
 
 const morgan = require("morgan");
 
@@ -28,6 +29,7 @@ app.use("/resources", resourcesRoutes);
 app.use("/users", usersRoutes);
 app.use("/posts", postsRoutes);
 app.use("/bathrooms", bathroomRoutes);
+app.use("/comments", commentsRoutes);
 
 
 /** Handle 404 errors -- this matches everything */
